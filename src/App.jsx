@@ -6,6 +6,8 @@ import { MENU, REFRESH_INTERVAL } from "./constants";
 import ContainersView from "./components/ContainersView";
 import ImagesView from "./components/ImagesView";
 import ServicesView from "./components/ServicesView";
+import NetworksView from "./components/NetworksView";
+import VolumesView from "./components/VolumesView";
 import AboutModal from "./components/AboutModal";
 import SettingsModal from "./components/SettingsModal";
 
@@ -50,6 +52,14 @@ function App() {
           setView("services");
           break;
 
+        case MENU.NETWORKS:
+          setView("networks");
+          break;
+
+        case MENU.VOLUMES:
+          setView("volumes");
+          break;
+
         case MENU.SETTINGS:
           setShowSettings(true);
           break;
@@ -80,6 +90,8 @@ function App() {
       {view === "containers" && <ContainersView />}
       {view === "images" && <ImagesView />}
       {view === "services" && <ServicesView />}
+      {view === "networks" && <NetworksView />}
+      {view === "volumes" && <VolumesView />}
 
       {showSettings && (
         <SettingsModal

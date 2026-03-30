@@ -141,6 +141,68 @@ fn docker_compose_remove_service(path: String, service: String) -> Result<String
     }
 }
 
+#[tauri::command]
+fn docker_remove_network(id: String) -> Result<String, String> {
+    let output = Command::new("docker")
+        .args(["network", "rm", &id])
+        .output()
+        .map_err(|e| e.to_string())?;
+    if output.status.success() {
+        Ok(id)
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).trim().to_string())
+    }
+}
+
+#[tauri::command]
+fn docker_remove_volume(name: String) -> Result<String, String> {
+    let output = Command::new("docker")
+        .args(["volume", "rm", &name])
+        .output()
+        .map_err(|e| e.to_string())?;
+    if output.status.success() {
+        Ok(name)
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).trim().to_string())
+    }
+}
+
+#[tauri::command]
+fn docker_networks() -> Result<Vec<serde_json::Value>, String> {
+    let output = Command::new("docker")
+        .args(["network", "ls", "--format", "{{json .}}"])
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    let networks = stdout
+        .lines()
+        .filter(|l| !l.is_empty())
+        .filter_map(|l| serde_json::from_str(l).ok())
+        .collect();
+
+    Ok(networks)
+}
+
+#[tauri::command]
+fn docker_volumes() -> Result<Vec<serde_json::Value>, String> {
+    let output = Command::new("docker")
+        .args(["volume", "ls", "--format", "{{json .}}"])
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    let volumes = stdout
+        .lines()
+        .filter(|l| !l.is_empty())
+        .filter_map(|l| serde_json::from_str(l).ok())
+        .collect();
+
+    Ok(volumes)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -150,6 +212,10 @@ pub fn run() {
             docker_ps,
             docker_images,
             docker_services,
+            docker_networks,
+            docker_volumes,
+            docker_remove_network,
+            docker_remove_volume,
             docker_stop_container,
             docker_start_container,
             docker_remove_container,
@@ -177,6 +243,20 @@ pub fn run() {
                 true,
                 Some("CmdOrCtrl+3"),
             )?;
+            let networks_item = MenuItem::with_id(
+                handle,
+                "nav:networks",
+                "Networks",
+                true,
+                Some("CmdOrCtrl+4"),
+            )?;
+            let volumes_item = MenuItem::with_id(
+                handle,
+                "nav:volumes",
+                "Volumes",
+                true,
+                Some("CmdOrCtrl+5"),
+            )?;
             let refresh_item = MenuItem::with_id(
                 handle,
                 "action:refresh",
@@ -197,6 +277,8 @@ pub fn run() {
                 .item(&images_item)
                 .item(&containers_item)
                 .item(&services_item)
+                .item(&networks_item)
+                .item(&volumes_item)
                 .separator()
                 .item(&refresh_item)
                 .build()?;
@@ -210,7 +292,7 @@ pub fn run() {
                 Some("CmdOrCtrl+,"),
             )?;
             let about_item =
-                MenuItem::with_id(handle, "app:about", "About DockerUtils", true, None::<&str>)?;
+                MenuItem::with_id(handle, "app:about", "About Dockyard", true, None::<&str>)?;
 
             // --- Help menu ---
             let help_menu = SubmenuBuilder::new(handle, "Help")

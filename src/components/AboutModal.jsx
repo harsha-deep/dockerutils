@@ -47,7 +47,7 @@ function AboutModal({ onClose }) {
 
         <div>
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-            DockerUtils
+            Dockyard
           </h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             v{APP_VERSION}
@@ -55,8 +55,7 @@ function AboutModal({ onClose }) {
         </div>
 
         <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-          A lightweight desktop tool to manage Docker containers, images, and
-          services.
+          A lightweight desktop tool to manage Docker containers, images, services, networks, and volumes.
         </p>
 
         <button
