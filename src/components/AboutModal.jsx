@@ -19,30 +19,9 @@ function AboutModal({ onClose }) {
         className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-80 p-8 flex flex-col items-center gap-4 text-center"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Docker-inspired icon */}
-        <div className="w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg">
-          <svg
-            viewBox="0 0 48 48"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            className="w-10 h-10"
-          >
-            {/* Container stack icon */}
-            <rect x="4" y="22" width="10" height="8" rx="1.5" fill="white" />
-            <rect x="16" y="22" width="10" height="8" rx="1.5" fill="white" />
-            <rect x="28" y="22" width="10" height="8" rx="1.5" fill="white" />
-            <rect x="4" y="12" width="10" height="8" rx="1.5" fill="white" opacity="0.7" />
-            <rect x="16" y="12" width="10" height="8" rx="1.5" fill="white" opacity="0.7" />
-            <rect x="16" y="32" width="10" height="8" rx="1.5" fill="white" opacity="0.5" />
-            {/* Whale tail hint */}
-            <path
-              d="M39 30 C42 28 44 24 44 20"
-              stroke="white"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              opacity="0.8"
-            />
-          </svg>
+        {/* Dockyard logo */}
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center">
+          <img src="/dockyard.svg" alt="Dockyard logo" className="w-16 h-16" />
         </div>
 
         <div>

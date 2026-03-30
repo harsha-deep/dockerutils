@@ -14,14 +14,18 @@ function ServicesView() {
   const [loadingRows, setLoadingRows] = useState(new Set());
 
   const fetchServices = useCallback(async () => {
+    if (!servicePath) {
+      setData([]);
+      return;
+    }
     try {
-      const result = await invoke("docker_services");
+      const result = await invoke("docker_services", { path: servicePath });
       setData(result);
     } catch (err) {
       console.error(err);
       toast.error("Failed to fetch services");
     }
-  }, []);
+  }, [servicePath]);
 
   const setRowLoading = (key, loading) =>
     setLoadingRows((prev) => {
@@ -82,16 +86,15 @@ function ServicesView() {
   };
 
   const columns = [
-    { header: "Name", accessorKey: "Name" },
-    { header: "Mode", accessorKey: "Mode" },
-    { header: "Replicas", accessorKey: "Replicas" },
+    { header: "Service", accessorKey: "Service" },
     { header: "Image", accessorKey: "Image" },
+    { header: "Status", accessorKey: "Status" },
     { header: "Ports", accessorKey: "Ports" },
     {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => {
-        const service = row.original.Name;
+        const service = row.original.Service;
         const stopping = loadingRows.has(`stop-${service}`);
         const removing = loadingRows.has(`remove-${service}`);
         const busy = stopping || removing;

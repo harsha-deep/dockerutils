@@ -40,11 +40,16 @@ fn docker_images() -> Result<Vec<serde_json::Value>, String> {
 }
 
 #[tauri::command]
-fn docker_services() -> Result<Vec<serde_json::Value>, String> {
+fn docker_services(path: String) -> Result<Vec<serde_json::Value>, String> {
     let output = Command::new("docker")
-        .args(["service", "ls", "--format", "{{json .}}"])
+        .args(["compose", "ps", "--format", "{{json .}}"])
+        .current_dir(&path)
         .output()
         .map_err(|e| e.to_string())?;
+
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+    }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
 
@@ -250,13 +255,8 @@ pub fn run() {
                 true,
                 Some("CmdOrCtrl+4"),
             )?;
-            let volumes_item = MenuItem::with_id(
-                handle,
-                "nav:volumes",
-                "Volumes",
-                true,
-                Some("CmdOrCtrl+5"),
-            )?;
+            let volumes_item =
+                MenuItem::with_id(handle, "nav:volumes", "Volumes", true, Some("CmdOrCtrl+5"))?;
             let refresh_item = MenuItem::with_id(
                 handle,
                 "action:refresh",
