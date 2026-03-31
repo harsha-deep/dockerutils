@@ -1,4 +1,30 @@
+import { useState } from "react";
+import { check } from "@tauri-apps/plugin-updater";
+import { relaunch } from "@tauri-apps/plugin-process";
+
 function SettingsModal({ darkMode, onToggleDark, onClose }) {
+  const [updateStatus, setUpdateStatus] = useState(null); // null | "checking" | "available" | "downloading" | "up-to-date" | "error"
+  const [updateError, setUpdateError] = useState(null);
+
+  const checkForUpdates = async () => {
+    setUpdateStatus("checking");
+    setUpdateError(null);
+    try {
+      const update = await check();
+      if (update) {
+        setUpdateStatus("downloading");
+        await update.downloadAndInstall();
+        setUpdateStatus("available");
+        await relaunch();
+      } else {
+        setUpdateStatus("up-to-date");
+      }
+    } catch (err) {
+      setUpdateStatus("error");
+      setUpdateError(err?.toString() || "Update check failed");
+    }
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
@@ -92,6 +118,44 @@ function SettingsModal({ darkMode, onToggleDark, onClose }) {
                 darkMode ? "translate-x-6" : "translate-x-1"
               }`}
             />
+          </button>
+        </div>
+
+        <hr className="border-gray-200 dark:border-gray-700" />
+
+        {/* Check for Updates Row */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                className="w-4 h-4 text-green-500"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                Updates
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {updateStatus === "checking" && "Checking for updates…"}
+                {updateStatus === "downloading" && "Downloading update…"}
+                {updateStatus === "up-to-date" && "You're on the latest version"}
+                {updateStatus === "error" && (updateError || "Update check failed")}
+                {updateStatus === null && "Check for new versions"}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={checkForUpdates}
+            disabled={updateStatus === "checking" || updateStatus === "downloading"}
+            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+          >
+            {updateStatus === "checking" || updateStatus === "downloading" ? "Checking…" : "Check"}
           </button>
         </div>
       </div>

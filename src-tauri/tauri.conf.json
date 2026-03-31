@@ -31,5 +31,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/harsha-deep/dockyard/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEFCQTNFNjM1MTQ0OUE0MjEKUldRaHBFa1VOZWFqcTZLL0xObnNZMWVtRks0VVZ1V2QxK01SSSs1ZXpGQ3hsdllza09OdFVHZHcK"
+    }
   }
 }
