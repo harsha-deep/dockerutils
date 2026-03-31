@@ -31,17 +31,17 @@ function SettingsModal({ darkMode, onToggleDark, onClose }) {
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-96 p-6 flex flex-col gap-5"
+        className="bg-white dark:bg-[#252526] rounded-2xl shadow-2xl w-96 p-6 flex flex-col gap-5"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-[#D4D4D4]">
             Settings
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer transition-colors"
+            className="text-gray-400 dark:text-[#9E9E9E] hover:text-gray-600 dark:hover:text-[#D4D4D4] cursor-pointer transition-colors"
             aria-label="Close settings"
           >
             <svg
@@ -60,12 +60,12 @@ function SettingsModal({ darkMode, onToggleDark, onClose }) {
           </button>
         </div>
 
-        <hr className="border-gray-200 dark:border-gray-700" />
+        <hr className="border-gray-200 dark:border-[#3C3C3C]" />
 
         {/* Dark Mode Row */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-[#2D2D2D] flex items-center justify-center">
               {darkMode ? (
                 <svg
                   viewBox="0 0 24 24"
@@ -95,10 +95,10 @@ function SettingsModal({ darkMode, onToggleDark, onClose }) {
               )}
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
+              <p className="text-sm font-medium text-gray-900 dark:text-[#D4D4D4]">
                 Dark Mode
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-gray-500 dark:text-[#9E9E9E]">
                 {darkMode ? "Dark theme active" : "Light theme active"}
               </p>
             </div>
@@ -110,7 +110,7 @@ function SettingsModal({ darkMode, onToggleDark, onClose }) {
             aria-checked={darkMode}
             onClick={onToggleDark}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
-              darkMode ? "bg-indigo-600" : "bg-gray-300 dark:bg-gray-600"
+              darkMode ? "bg-indigo-600" : "bg-gray-300 dark:bg-[#3C3C3C]"
             }`}
           >
             <span
@@ -121,12 +121,12 @@ function SettingsModal({ darkMode, onToggleDark, onClose }) {
           </button>
         </div>
 
-        <hr className="border-gray-200 dark:border-gray-700" />
+        <hr className="border-gray-200 dark:border-[#3C3C3C]" />
 
         {/* Check for Updates Row */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-[#2D2D2D] flex items-center justify-center">
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -138,10 +138,10 @@ function SettingsModal({ darkMode, onToggleDark, onClose }) {
               </svg>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
+              <p className="text-sm font-medium text-gray-900 dark:text-[#D4D4D4]">
                 Updates
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-gray-500 dark:text-[#9E9E9E]">
                 {updateStatus === "checking" && "Checking for updates…"}
                 {updateStatus === "downloading" && "Downloading update…"}
                 {updateStatus === "up-to-date" && "You're on the latest version"}

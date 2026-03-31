@@ -16,7 +16,7 @@ function AboutModal({ onClose }) {
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-80 p-8 flex flex-col items-center gap-4 text-center"
+        className="bg-white dark:bg-[#252526] rounded-2xl shadow-2xl w-80 p-8 flex flex-col items-center gap-4 text-center"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Dockyard logo */}
@@ -25,21 +25,21 @@ function AboutModal({ onClose }) {
         </div>
 
         <div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-[#D4D4D4]">
             Dockyard
           </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-sm text-gray-500 dark:text-[#9E9E9E] mt-1">
             v{APP_VERSION}
           </p>
         </div>
 
-        <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+        <p className="text-sm text-gray-600 dark:text-[#D4D4D4] leading-relaxed">
           A lightweight desktop tool to manage Docker containers, images, services, networks, and volumes.
         </p>
 
         <button
           onClick={handleGitHub}
-          className="flex items-center gap-2 px-5 py-2 rounded-lg bg-gray-900 dark:bg-gray-700 text-white text-sm font-medium hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors cursor-pointer"
+          className="flex items-center gap-2 px-5 py-2 rounded-lg bg-gray-900 dark:bg-[#2D2D2D] text-white text-sm font-medium hover:bg-gray-700 dark:hover:bg-[#2A2D2E] transition-colors cursor-pointer"
         >
           {/* GitHub icon */}
           <svg
@@ -55,7 +55,7 @@ function AboutModal({ onClose }) {
 
         <button
           onClick={onClose}
-          className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer transition-colors"
+          className="text-xs text-gray-400 dark:text-[#9E9E9E] hover:text-gray-600 dark:hover:text-[#D4D4D4] cursor-pointer transition-colors"
         >
           Close
         </button>

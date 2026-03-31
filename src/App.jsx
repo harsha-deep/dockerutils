@@ -80,7 +80,7 @@ function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#1E1E1E] text-gray-900 dark:text-[#D4D4D4] transition-colors">
       <Toaster richColors position="bottom-right" />
 
       <div className="px-5 pt-5 pb-2">
