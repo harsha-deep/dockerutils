@@ -89,7 +89,23 @@ function ServicesView() {
     { header: "Service", accessorKey: "Service" },
     { header: "Image", accessorKey: "Image" },
     { header: "Status", accessorKey: "Status" },
-    { header: "Ports", accessorKey: "Ports" },
+    {
+      header: "Ports",
+      accessorKey: "Ports",
+      cell: ({ getValue }) => {
+        const ports = getValue();
+        if (!ports) return <span className="text-gray-400 dark:text-[#6B6B6B] text-xs">—</span>;
+        return (
+          <div className="flex flex-wrap gap-1">
+            {ports.split(", ").map((p) => (
+              <span key={p} className="inline-block px-2 py-0.5 rounded text-xs font-mono bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
+                {p}
+              </span>
+            ))}
+          </div>
+        );
+      },
+    },
     {
       id: "actions",
       header: "Actions",

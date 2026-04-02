@@ -70,7 +70,7 @@ function SettingsModal({ darkMode, onToggleDark, onClose }) {
                 <svg
                   viewBox="0 0 24 24"
                   fill="currentColor"
-                  className="w-4 h-4 text-indigo-400"
+                  className="w-4 h-4 text-blue-400"
                 >
                   <path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z" />
                 </svg>
@@ -109,8 +109,8 @@ function SettingsModal({ darkMode, onToggleDark, onClose }) {
             role="switch"
             aria-checked={darkMode}
             onClick={onToggleDark}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
-              darkMode ? "bg-indigo-600" : "bg-gray-300 dark:bg-[#3C3C3C]"
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+              darkMode ? "bg-blue-600" : "bg-gray-300 dark:bg-[#3C3C3C]"
             }`}
           >
             <span
@@ -153,7 +153,7 @@ function SettingsModal({ darkMode, onToggleDark, onClose }) {
           <button
             onClick={checkForUpdates}
             disabled={updateStatus === "checking" || updateStatus === "downloading"}
-            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
           >
             {updateStatus === "checking" || updateStatus === "downloading" ? "Checking…" : "Check"}
           </button>

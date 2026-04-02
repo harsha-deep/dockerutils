@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "dockyard",
+        "title": "Dockyard",
         "width": 800,
         "height": 600
       }
