@@ -1,18 +1,67 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-use std::process::Command;
+use std::fs;
+use std::sync::Mutex;
 use tauri::menu::{MenuBuilder, MenuItem, SubmenuBuilder};
-use tauri::Emitter;
+use tauri::{Emitter, Manager, State};
+
+mod models;
+mod runner;
+
+use models::{AppSettings, Environment};
+use runner::execute_docker;
+
+pub struct AppState(pub Mutex<AppSettings>);
+
+fn get_active_env(state: &State<'_, AppState>) -> Result<Environment, String> {
+    let settings = state.0.lock().map_err(|_| "Failed to lock state")?;
+    let env_id = settings.active_env_id.as_deref().unwrap_or("local");
+    
+    if env_id == "local" {
+        return Ok(Environment::Local);
+    }
+    
+    settings
+        .environments
+        .iter()
+        .find(|e| match e {
+            Environment::Local => false,
+            Environment::Ssh { id, .. } => id == env_id,
+        })
+        .cloned()
+        .ok_or_else(|| "Active environment not found".to_string())
+}
 
 #[tauri::command]
-fn docker_ps() -> Result<Vec<serde_json::Value>, String> {
-    let output = Command::new("docker")
-        .args(["ps", "-a", "--format", "{{json .}}"])
-        .output()
-        .map_err(|e| e.to_string())?;
+fn get_settings(state: State<'_, AppState>) -> Result<AppSettings, String> {
+    let settings = state.0.lock().map_err(|_| "Failed to lock state")?;
+    Ok(settings.clone())
+}
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
+#[tauri::command]
+fn save_settings(app: tauri::AppHandle, state: State<'_, AppState>, new_settings: AppSettings) -> Result<(), String> {
+    let mut settings = state.0.lock().map_err(|_| "Failed to lock state")?;
+    *settings = new_settings.clone();
+    
+    let app_config_dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
+    fs::create_dir_all(&app_config_dir).map_err(|e| e.to_string())?;
+    let config_path = app_config_dir.join("settings.json");
+    
+    let json = serde_json::to_string_pretty(&new_settings).map_err(|e| e.to_string())?;
+    fs::write(config_path, json).map_err(|e| e.to_string())?;
+    
+    Ok(())
+}
 
-    let containers = stdout
+#[tauri::command]
+fn docker_ps(state: State<'_, AppState>) -> Result<Vec<serde_json::Value>, String> {
+    let env = get_active_env(&state)?;
+    let output = execute_docker(&["ps", "-a", "--format", "{{json .}}"], &env, None)?;
+
+    if !output.success {
+        return Err(output.stderr);
+    }
+
+    let containers = output.stdout
         .lines()
         .filter(|l| !l.is_empty())
         .filter_map(|l| serde_json::from_str(l).ok())
@@ -22,15 +71,15 @@ fn docker_ps() -> Result<Vec<serde_json::Value>, String> {
 }
 
 #[tauri::command]
-fn docker_images() -> Result<Vec<serde_json::Value>, String> {
-    let output = Command::new("docker")
-        .args(["images", "--format", "{{json .}}"])
-        .output()
-        .map_err(|e| e.to_string())?;
+fn docker_images(state: State<'_, AppState>) -> Result<Vec<serde_json::Value>, String> {
+    let env = get_active_env(&state)?;
+    let output = execute_docker(&["images", "--format", "{{json .}}"], &env, None)?;
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
+    if !output.success {
+        return Err(output.stderr);
+    }
 
-    let images = stdout
+    let images = output.stdout
         .lines()
         .filter(|l| !l.is_empty())
         .filter_map(|l| serde_json::from_str(l).ok())
@@ -40,20 +89,15 @@ fn docker_images() -> Result<Vec<serde_json::Value>, String> {
 }
 
 #[tauri::command]
-fn docker_services(path: String) -> Result<Vec<serde_json::Value>, String> {
-    let output = Command::new("docker")
-        .args(["compose", "ps", "--format", "{{json .}}"])
-        .current_dir(&path)
-        .output()
-        .map_err(|e| e.to_string())?;
+fn docker_services(state: State<'_, AppState>, path: String) -> Result<Vec<serde_json::Value>, String> {
+    let env = get_active_env(&state)?;
+    let output = execute_docker(&["compose", "ps", "--format", "{{json .}}"], &env, Some(&path))?;
 
-    if !output.status.success() {
-        return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+    if !output.success {
+        return Err(output.stderr);
     }
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
-
-    let services = stdout
+    let services = output.stdout
         .lines()
         .filter(|l| !l.is_empty())
         .filter_map(|l| serde_json::from_str(l).ok())
@@ -63,125 +107,106 @@ fn docker_services(path: String) -> Result<Vec<serde_json::Value>, String> {
 }
 
 #[tauri::command]
-fn docker_stop_container(name: String) -> Result<String, String> {
+fn docker_stop_container(state: State<'_, AppState>, name: String) -> Result<String, String> {
     let clean = name.trim_start_matches('/').to_string();
-    let output = Command::new("docker")
-        .args(["stop", &clean])
-        .output()
-        .map_err(|e| e.to_string())?;
-    print!("Output: {:?}", output);
-    if output.status.success() {
+    let env = get_active_env(&state)?;
+    let output = execute_docker(&["stop", &clean], &env, None)?;
+    if output.success {
         Ok(clean)
     } else {
-        Err(String::from_utf8_lossy(&output.stderr).trim().to_string())
+        Err(output.stderr)
     }
 }
 
 #[tauri::command]
-fn docker_remove_container(name: String) -> Result<String, String> {
+fn docker_remove_container(state: State<'_, AppState>, name: String) -> Result<String, String> {
     let clean = name.trim_start_matches('/').to_string();
-    let output = Command::new("docker")
-        .args(["rm", &clean])
-        .output()
-        .map_err(|e| e.to_string())?;
-    if output.status.success() {
+    let env = get_active_env(&state)?;
+    let output = execute_docker(&["rm", &clean], &env, None)?;
+    if output.success {
         Ok(clean)
     } else {
-        Err(String::from_utf8_lossy(&output.stderr).trim().to_string())
+        Err(output.stderr)
     }
 }
 
 #[tauri::command]
-fn docker_start_container(name: String) -> Result<String, String> {
+fn docker_start_container(state: State<'_, AppState>, name: String) -> Result<String, String> {
     let clean = name.trim_start_matches('/').to_string();
-    let output = Command::new("docker")
-        .args(["start", &clean])
-        .output()
-        .map_err(|e| e.to_string())?;
-    if output.status.success() {
+    let env = get_active_env(&state)?;
+    let output = execute_docker(&["start", &clean], &env, None)?;
+    if output.success {
         Ok(clean)
     } else {
-        Err(String::from_utf8_lossy(&output.stderr).trim().to_string())
+        Err(output.stderr)
     }
 }
 
 #[tauri::command]
-fn docker_delete_image(id: String) -> Result<String, String> {
-    let output = Command::new("docker")
-        .args(["rmi", &id])
-        .output()
-        .map_err(|e| e.to_string())?;
-    if output.status.success() {
+fn docker_delete_image(state: State<'_, AppState>, id: String) -> Result<String, String> {
+    let env = get_active_env(&state)?;
+    let output = execute_docker(&["rmi", &id], &env, None)?;
+    if output.success {
         Ok(id)
     } else {
-        Err(String::from_utf8_lossy(&output.stderr).trim().to_string())
+        Err(output.stderr)
     }
 }
 
 #[tauri::command]
-fn docker_compose_stop_service(path: String, service: String) -> Result<String, String> {
-    let output = Command::new("docker")
-        .args(["compose", "stop", &service])
-        .current_dir(&path)
-        .output()
-        .map_err(|e| e.to_string())?;
-    if output.status.success() {
+fn docker_compose_stop_service(state: State<'_, AppState>, path: String, service: String) -> Result<String, String> {
+    let env = get_active_env(&state)?;
+    let output = execute_docker(&["compose", "stop", &service], &env, Some(&path))?;
+    if output.success {
         Ok(service)
     } else {
-        Err(String::from_utf8_lossy(&output.stderr).trim().to_string())
+        Err(output.stderr)
     }
 }
 
 #[tauri::command]
-fn docker_compose_remove_service(path: String, service: String) -> Result<String, String> {
-    let output = Command::new("docker")
-        .args(["compose", "rm", "-f", &service])
-        .current_dir(&path)
-        .output()
-        .map_err(|e| e.to_string())?;
-    if output.status.success() {
+fn docker_compose_remove_service(state: State<'_, AppState>, path: String, service: String) -> Result<String, String> {
+    let env = get_active_env(&state)?;
+    let output = execute_docker(&["compose", "rm", "-f", &service], &env, Some(&path))?;
+    if output.success {
         Ok(service)
     } else {
-        Err(String::from_utf8_lossy(&output.stderr).trim().to_string())
+        Err(output.stderr)
     }
 }
 
 #[tauri::command]
-fn docker_remove_network(id: String) -> Result<String, String> {
-    let output = Command::new("docker")
-        .args(["network", "rm", &id])
-        .output()
-        .map_err(|e| e.to_string())?;
-    if output.status.success() {
+fn docker_remove_network(state: State<'_, AppState>, id: String) -> Result<String, String> {
+    let env = get_active_env(&state)?;
+    let output = execute_docker(&["network", "rm", &id], &env, None)?;
+    if output.success {
         Ok(id)
     } else {
-        Err(String::from_utf8_lossy(&output.stderr).trim().to_string())
+        Err(output.stderr)
     }
 }
 
 #[tauri::command]
-fn docker_remove_volume(name: String) -> Result<String, String> {
-    let output = Command::new("docker")
-        .args(["volume", "rm", &name])
-        .output()
-        .map_err(|e| e.to_string())?;
-    if output.status.success() {
+fn docker_remove_volume(state: State<'_, AppState>, name: String) -> Result<String, String> {
+    let env = get_active_env(&state)?;
+    let output = execute_docker(&["volume", "rm", &name], &env, None)?;
+    if output.success {
         Ok(name)
     } else {
-        Err(String::from_utf8_lossy(&output.stderr).trim().to_string())
+        Err(output.stderr)
     }
 }
 
 #[tauri::command]
-fn docker_networks() -> Result<Vec<serde_json::Value>, String> {
-    let output = Command::new("docker")
-        .args(["network", "ls", "--format", "{{json .}}"])
-        .output()
-        .map_err(|e| e.to_string())?;
+fn docker_networks(state: State<'_, AppState>) -> Result<Vec<serde_json::Value>, String> {
+    let env = get_active_env(&state)?;
+    let output = execute_docker(&["network", "ls", "--format", "{{json .}}"], &env, None)?;
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
+    if !output.success {
+        return Err(output.stderr);
+    }
 
-    let networks = stdout
+    let networks = output.stdout
         .lines()
         .filter(|l| !l.is_empty())
         .filter_map(|l| serde_json::from_str(l).ok())
@@ -191,15 +216,15 @@ fn docker_networks() -> Result<Vec<serde_json::Value>, String> {
 }
 
 #[tauri::command]
-fn docker_volumes() -> Result<Vec<serde_json::Value>, String> {
-    let output = Command::new("docker")
-        .args(["volume", "ls", "--format", "{{json .}}"])
-        .output()
-        .map_err(|e| e.to_string())?;
+fn docker_volumes(state: State<'_, AppState>) -> Result<Vec<serde_json::Value>, String> {
+    let env = get_active_env(&state)?;
+    let output = execute_docker(&["volume", "ls", "--format", "{{json .}}"], &env, None)?;
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
+    if !output.success {
+        return Err(output.stderr);
+    }
 
-    let volumes = stdout
+    let volumes = output.stdout
         .lines()
         .filter(|l| !l.is_empty())
         .filter_map(|l| serde_json::from_str(l).ok())
@@ -216,6 +241,8 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
+            get_settings,
+            save_settings,
             docker_ps,
             docker_images,
             docker_services,
@@ -233,83 +260,55 @@ pub fn run() {
         .setup(|app| {
             let handle = app.handle();
 
-            // --- View menu items ---
-            let images_item =
-                MenuItem::with_id(handle, "nav:images", "Images", true, Some("CmdOrCtrl+1"))?;
-            let containers_item = MenuItem::with_id(
-                handle,
-                "nav:containers",
-                "Containers",
-                true,
-                Some("CmdOrCtrl+2"),
-            )?;
-            let services_item = MenuItem::with_id(
-                handle,
-                "nav:services",
-                "Services",
-                true,
-                Some("CmdOrCtrl+3"),
-            )?;
-            let networks_item = MenuItem::with_id(
-                handle,
-                "nav:networks",
-                "Networks",
-                true,
-                Some("CmdOrCtrl+4"),
-            )?;
-            let volumes_item =
-                MenuItem::with_id(handle, "nav:volumes", "Volumes", true, Some("CmdOrCtrl+5"))?;
-            let refresh_item = MenuItem::with_id(
-                handle,
-                "action:refresh",
-                "Refresh",
-                true,
-                Some("CmdOrCtrl+R"),
-            )?;
+            let app_config_dir = handle.path().app_config_dir().expect("Failed to get config dir");
+            let config_path = app_config_dir.join("settings.json");
+            
+            let settings = if config_path.exists() {
+                let content = fs::read_to_string(&config_path).unwrap_or_default();
+                serde_json::from_str(&content).unwrap_or_else(|_| AppSettings::new())
+            } else {
+                AppSettings::new()
+            };
+            
+            app.manage(AppState(Mutex::new(settings)));
 
-            // --- File menu ---
-            let quit_item =
-                MenuItem::with_id(handle, "app:quit", "Quit", true, Some("CmdOrCtrl+Q"))?;
-            let file_menu = SubmenuBuilder::new(handle, "File")
-                .item(&quit_item)
-                .build()?;
+            let images_item = MenuItem::with_id(handle, "nav:images", "Images", true, Some("CmdOrCtrl+1")).unwrap();
+            let containers_item = MenuItem::with_id(handle, "nav:containers", "Containers", true, Some("CmdOrCtrl+2")).unwrap();
+            let services_item = MenuItem::with_id(handle, "nav:services", "Services", true, Some("CmdOrCtrl+3")).unwrap();
+            let networks_item = MenuItem::with_id(handle, "nav:networks", "Networks", true, Some("CmdOrCtrl+4")).unwrap();
+            let volumes_item = MenuItem::with_id(handle, "nav:volumes", "Volumes", true, Some("CmdOrCtrl+5")).unwrap();
+            let environments_item = MenuItem::with_id(handle, "nav:environments", "Environments", true, Some("CmdOrCtrl+6")).unwrap();
+            let refresh_item = MenuItem::with_id(handle, "action:refresh", "Refresh", true, Some("CmdOrCtrl+R")).unwrap();
 
-            // --- View menu ---
+            let quit_item = MenuItem::with_id(handle, "app:quit", "Quit", true, Some("CmdOrCtrl+Q")).unwrap();
+            let file_menu = SubmenuBuilder::new(handle, "File").item(&quit_item).build().unwrap();
+
             let view_menu = SubmenuBuilder::new(handle, "View")
                 .item(&images_item)
                 .item(&containers_item)
                 .item(&services_item)
                 .item(&networks_item)
                 .item(&volumes_item)
+                .item(&environments_item)
                 .separator()
                 .item(&refresh_item)
-                .build()?;
+                .build().unwrap();
 
-            // --- Help/App menu items ---
-            let settings_item = MenuItem::with_id(
-                handle,
-                "app:settings",
-                "Settings",
-                true,
-                Some("CmdOrCtrl+,"),
-            )?;
-            let about_item =
-                MenuItem::with_id(handle, "app:about", "About Dockyard", true, None::<&str>)?;
+            let settings_item = MenuItem::with_id(handle, "app:settings", "Settings", true, Some("CmdOrCtrl+,")).unwrap();
+            let about_item = MenuItem::with_id(handle, "app:about", "About Dockyard", true, None::<&str>).unwrap();
 
-            // --- Help menu ---
             let help_menu = SubmenuBuilder::new(handle, "Help")
                 .item(&settings_item)
                 .item(&about_item)
-                .build()?;
+                .build().unwrap();
 
-            // --- Main menu ---
             let menu = MenuBuilder::new(handle)
                 .item(&file_menu)
                 .item(&view_menu)
                 .item(&help_menu)
-                .build()?;
+                .build().unwrap();
 
-            app.set_menu(menu)?;
+            app.set_menu(menu).unwrap();
 
             app.on_menu_event(move |app_handle, event| match event.id().as_ref() {
                 "app:quit" => app_handle.exit(0),

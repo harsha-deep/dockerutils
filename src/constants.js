@@ -4,6 +4,7 @@ export const MENU = {
   SERVICES: "nav:services",
   NETWORKS: "nav:networks",
   VOLUMES: "nav:volumes",
+  ENVIRONMENTS: "nav:environments",
   REFRESH: "action:refresh",
   SETTINGS: "app:settings",
   ABOUT: "app:about",

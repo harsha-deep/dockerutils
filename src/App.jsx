@@ -1,6 +1,7 @@
 import "./App.css";
 import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { invoke } from "@tauri-apps/api/core";
 import { Toaster } from "sonner";
 import { MENU, REFRESH_INTERVAL } from "./constants";
 import ContainersView from "./components/ContainersView";
@@ -8,6 +9,7 @@ import ImagesView from "./components/ImagesView";
 import ServicesView from "./components/ServicesView";
 import NetworksView from "./components/NetworksView";
 import VolumesView from "./components/VolumesView";
+import EnvironmentsView from "./components/EnvironmentsView";
 import AboutModal from "./components/AboutModal";
 import SettingsModal from "./components/SettingsModal";
 
@@ -15,6 +17,7 @@ function App() {
   const [view, setView] = useState("containers");
   const [showAbout, setShowAbout] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [settings, setSettings] = useState({ environments: [], active_env_id: "local" });
 
   const [darkMode, setDarkMode] = useState(() => {
     const stored = localStorage.getItem("darkMode");
@@ -34,6 +37,9 @@ function App() {
   const toggleDark = () => setDarkMode((prev) => !prev);
 
   useEffect(() => {
+    // Fetch initial settings
+    invoke("get_settings").then(setSettings).catch(console.error);
+
     const interval = setInterval(() => { }, REFRESH_INTERVAL);
 
     const unlistenPromise = listen("menu-event", (event) => {
@@ -58,6 +64,10 @@ function App() {
 
         case MENU.VOLUMES:
           setView("volumes");
+          break;
+
+        case MENU.ENVIRONMENTS:
+          setView("environments");
           break;
 
         case MENU.SETTINGS:
@@ -92,6 +102,7 @@ function App() {
       {view === "services" && <ServicesView />}
       {view === "networks" && <NetworksView />}
       {view === "volumes" && <VolumesView />}
+      {view === "environments" && <EnvironmentsView settings={settings} setSettings={setSettings} />}
 
       {showSettings && (
         <SettingsModal
